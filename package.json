@@ -1,0 +1,30 @@
+{
+  "name": "eth-bot",
+  "version": "1.0.0",
+  "description": "bot to check eth prices, perform actions, etc",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "nodemon index.js",
+    "test": "nodemon test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yan-man/eth-bot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yan-man/eth-bot/issues"
+  },
+  "homepage": "https://github.com/yan-man/eth-bot#readme",
+  "dependencies": {
+    "axios": "^0.24.0",
+    "body-parser": "^1.19.0",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "lodash": "^4.17.21",
+    "nodemon": "^2.0.15",
+    "web3": "^1.6.0"
+  }
+}
