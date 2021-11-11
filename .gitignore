@@ -1,3 +1,6 @@
+# config
+config/*
+
 # Logs
 logs
 *.log
@@ -103,5 +106,4 @@ dist
 # TernJS port file
 .tern-port
 
-# config
-config/config.json
+
