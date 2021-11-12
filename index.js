@@ -9,8 +9,8 @@ const app = express();
 
 const provider = new ethers.providers.JsonRpcProvider(config.get("RPC_URL"));
 
-const dai = require("./services/dai");
-const uniswap = require("./services/dai");
+// const dai = require("./services/dai");
+const uniswap = require("./services/uniswap");
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
@@ -18,8 +18,14 @@ app.listen(port, () => {
 
 const yan = (async () => {
   const val = await provider.getBlockNumber();
+  const balance = await provider.getBalance(config.get("ACCOUNT_ADDR"));
   console.log(val);
+  console.log(ethers.utils.formatEther(balance));
 })();
+
+const uniswapContract = uniswap.getContract(provider);
+console.log(uniswapContract);
+// const daiContract = dai.getContract(web3);
 
 // const uniswapUsdcAddress = "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc";
 // const uniswapAbi = [
