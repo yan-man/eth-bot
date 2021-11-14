@@ -4,28 +4,51 @@ const express = require("express");
 // const Web3 = require("web3");
 const { ethers } = require("ethers");
 
+const CoinGecko = require("coingecko-api");
+
 const port = process.env.PORT || 3000;
 const app = express();
 
 const provider = new ethers.providers.JsonRpcProvider(config.get("RPC_URL"));
 
-// const dai = require("./services/dai");
+const dai = require("./services/dai");
 const uniswap = require("./services/uniswap");
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });
 
-const yan = (async () => {
-  const val = await provider.getBlockNumber();
-  const balance = await provider.getBalance(config.get("ACCOUNT_ADDR"));
-  console.log(val);
-  console.log(ethers.utils.formatEther(balance));
-})();
+const CoinGeckoClient = new CoinGecko();
 
-const uniswapContract = uniswap.getContract(provider);
-console.log(uniswapContract);
-// const daiContract = dai.getContract(web3);
+const execut = (async () => {
+  const uniswapContract = uniswap.getContract(provider);
+  const daiContract = dai.getContract(provider);
+
+  // let data = await CoinGeckoClient.coins.fetchTickers("bitcoin");
+  // console.log(data.data.tickers);
+
+  // console.log(uniswapContract);
+  // const signer = await provider.getSigner(
+  //   "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
+  // );
+  // const daiWithSigner = daiContract.connect(signer);
+  // const testbalval1 = await daiWithSigner.balanceOf(
+  //   "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
+  // );
+
+  // console.log(testbalval1.toBigInt());
+  // const testbalval = await daiContract.balanceOf(
+  //   "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
+  // );
+  // const bal = await signer.getBalance();
+  // // const signerBalance = await signer.getBalance();
+  // console.log(bal.toString());
+  // console.log(ethers.utils.formatUnits(testbalval.toNumber(), 18));
+  // // const val = await provider.getBlockNumber();
+  // const balance = await provider.getBalance(config.get("ACCOUNT_ADDR"));
+  // // console.log(val);
+  // console.log(ethers.utils.formatEther(balance));
+})();
 
 // const uniswapUsdcAddress = "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc";
 // const uniswapAbi = [

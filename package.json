@@ -21,6 +21,7 @@
   "dependencies": {
     "axios": "^0.24.0",
     "body-parser": "^1.19.0",
+    "coingecko-api": "^1.0.10",
     "config": "^3.3.6",
     "debug": "^4.3.2",
     "dotenv": "^10.0.0",

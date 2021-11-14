@@ -1,3 +1,5 @@
+const { ethers } = require("ethers");
+
 const abi = [
   {
     constant: true,
@@ -166,9 +168,8 @@ const abi = [
 // https://ropsten.etherscan.io/token/0xad6d458402f60fd3bd25163575031acdce07538d
 const addr = "0xaD6D458402F60fD3Bd25163575031ACDce07538D";
 
-const getContract = (web3) => {
-  console.log(abi);
-  const contract = new web3.eth.Contract(abi, addr);
+const getContract = (provider) => {
+  const contract = new ethers.Contract(addr, abi, provider);
   return contract;
 };
 
