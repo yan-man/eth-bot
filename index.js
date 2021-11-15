@@ -24,30 +24,33 @@ const execut = (async () => {
   const uniswapContract = uniswap.getContract(provider);
   const daiContract = dai.getContract(provider);
 
-  // let data = await CoinGeckoClient.coins.fetchTickers("bitcoin");
-  // console.log(data.data.tickers);
-
   // console.log(uniswapContract);
   // const signer = await provider.getSigner(
-  //   "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
+  //   "0x3C5de73bfFE35539A29fA1b4201BA517187E1e6E"
   // );
   // const daiWithSigner = daiContract.connect(signer);
   // const testbalval1 = await daiWithSigner.balanceOf(
   //   "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
   // );
 
-  // console.log(testbalval1.toBigInt());
-  // const testbalval = await daiContract.balanceOf(
-  //   "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
-  // );
+  // console.log(signer);
+  // console.log(await daiContract.symbol());
+  // console.log(testbalval1.toNumber());
+
+  const testbalval = await daiContract.balanceOf(
+    "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
+  );
+
+  console.log(testbalval.toString());
+
   // const bal = await signer.getBalance();
   // // const signerBalance = await signer.getBalance();
   // console.log(bal.toString());
-  // console.log(ethers.utils.formatUnits(testbalval.toNumber(), 18));
+  console.log(ethers.utils.formatUnits(testbalval.toNumber(), 18));
   // // const val = await provider.getBlockNumber();
   // const balance = await provider.getBalance(config.get("ACCOUNT_ADDR"));
   // // console.log(val);
-  // console.log(ethers.utils.formatEther(balance));
+  //
 })();
 
 // const uniswapUsdcAddress = "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc";
