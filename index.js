@@ -3,7 +3,11 @@ const config = require("config");
 const express = require("express");
 // const Web3 = require("web3");
 const { ethers } = require("ethers");
+const { Token } = require("@uniswap/sdk-core");
 const { Pool } = require("@uniswap/v3-sdk");
+const {
+  abi: IUniswapV3PoolABI,
+} = require("@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json");
 
 // const CoinGecko = require("coingecko-api");
 
@@ -26,19 +30,19 @@ const execut = (async () => {
   const daiContract = dai.getContract(provider);
 })();
 
-const poolAddress = "0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8";
-const poolImmutablesAbi = [
-  "function factory() external view returns (address)",
-  "function token0() external view returns (address)",
-  "function token1() external view returns (address)",
-  "function fee() external view returns (uint24)",
-  "function tickSpacing() external view returns (int24)",
-  "function maxLiquidityPerTick() external view returns (uint128)",
-];
+const poolAddress = "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8";
+// const poolImmutablesAbi = [
+//   "function factory() external view returns (address)",
+//   "function token0() external view returns (address)",
+//   "function token1() external view returns (address)",
+//   "function fee() external view returns (uint24)",
+//   "function tickSpacing() external view returns (int24)",
+//   "function maxLiquidityPerTick() external view returns (uint128)",
+// ];
 
 const poolContract = new ethers.Contract(
   poolAddress,
-  poolImmutablesAbi,
+  IUniswapV3PoolABI,
   provider
 );
 
@@ -54,8 +58,78 @@ async function getPoolImmutables() {
   return PoolImmutables;
 }
 
-getPoolImmutables().then((result) => {
-  console.log(result);
+async function getPoolState() {
+  const [liquidity, slot] = await Promise.all([
+    poolContract.liquidity(),
+    poolContract.slot0(),
+  ]);
+
+  const PoolState = {
+    liquidity,
+    sqrtPriceX96: slot[0],
+    tick: slot[1],
+    observationIndex: slot[2],
+    observationCardinality: slot[3],
+    observationCardinalityNext: slot[4],
+    feeProtocol: slot[5],
+    unlocked: slot[6],
+  };
+
+  return PoolState;
+}
+
+async function main() {
+  const [immutables, state] = await Promise.all([
+    getPoolImmutables(),
+    getPoolState(),
+  ]);
+
+  const TokenA = new Token(3, immutables.token0, 6, "USDC", "USD Coin");
+
+  const TokenB = new Token(3, immutables.token1, 18, "ETH", "Ether");
+
+  const poolExample = new Pool(
+    TokenA,
+    TokenB,
+    immutables.fee,
+    state.sqrtPriceX96.toString(),
+    state.liquidity.toString(),
+    state.tick
+  );
+
+  const token0Price = poolExample.token0Price;
+  const token1Price = poolExample.token1Price;
+
+  // console.log(poolExample.sqrtRatioX96);
+  // console.log(token0Price);
+  // console.log(2 ** 192 / poolExample.sqrtPriceX96 ** 2);
+}
+// function token0Price() {
+//   return (
+//     this._token0Price ??
+//     (this._token0Price = new Price(
+//       this.token0,
+//       this.token1,
+//       Q192,
+//       JSBI.multiply(this.sqrtRatioX96, this.sqrtRatioX96)
+//     ))
+//   );
+// }
+
+// function token1Price() {
+//   return (
+//     this._token1Price ??
+//     (this._token1Price = new Price(
+//       this.token1,
+//       this.token0,
+//       JSBI.multiply(this.sqrtRatioX96, this.sqrtRatioX96),
+//       Q192
+//     ))
+//   );
+// }
+
+main().then((result) => {
+  // console.log(result);
 });
 
 // const uniswapUsdcAddress = "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc";
