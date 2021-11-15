@@ -3,8 +3,9 @@ const config = require("config");
 const express = require("express");
 // const Web3 = require("web3");
 const { ethers } = require("ethers");
+const { Pool } = require("@uniswap/v3-sdk");
 
-const CoinGecko = require("coingecko-api");
+// const CoinGecko = require("coingecko-api");
 
 const port = process.env.PORT || 3000;
 const app = express();
@@ -18,40 +19,44 @@ app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });
 
-const CoinGeckoClient = new CoinGecko();
+// const CoinGeckoClient = new CoinGecko();
 
 const execut = (async () => {
   const uniswapContract = uniswap.getContract(provider);
   const daiContract = dai.getContract(provider);
-
-  // console.log(uniswapContract);
-  // const signer = await provider.getSigner(
-  //   "0x3C5de73bfFE35539A29fA1b4201BA517187E1e6E"
-  // );
-  // const daiWithSigner = daiContract.connect(signer);
-  // const testbalval1 = await daiWithSigner.balanceOf(
-  //   "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
-  // );
-
-  // console.log(signer);
-  // console.log(await daiContract.symbol());
-  // console.log(testbalval1.toNumber());
-
-  const testbalval = await daiContract.balanceOf(
-    "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
-  );
-
-  console.log(testbalval.toString());
-
-  // const bal = await signer.getBalance();
-  // // const signerBalance = await signer.getBalance();
-  // console.log(bal.toString());
-  console.log(ethers.utils.formatUnits(testbalval.toNumber(), 18));
-  // // const val = await provider.getBlockNumber();
-  // const balance = await provider.getBalance(config.get("ACCOUNT_ADDR"));
-  // // console.log(val);
-  //
 })();
+
+const poolAddress = "0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8";
+const poolImmutablesAbi = [
+  "function factory() external view returns (address)",
+  "function token0() external view returns (address)",
+  "function token1() external view returns (address)",
+  "function fee() external view returns (uint24)",
+  "function tickSpacing() external view returns (int24)",
+  "function maxLiquidityPerTick() external view returns (uint128)",
+];
+
+const poolContract = new ethers.Contract(
+  poolAddress,
+  poolImmutablesAbi,
+  provider
+);
+
+async function getPoolImmutables() {
+  const PoolImmutables = {
+    factory: await poolContract.factory(),
+    token0: await poolContract.token0(),
+    token1: await poolContract.token1(),
+    fee: await poolContract.fee(),
+    tickSpacing: await poolContract.tickSpacing(),
+    maxLiquidityPerTick: await poolContract.maxLiquidityPerTick(),
+  };
+  return PoolImmutables;
+}
+
+getPoolImmutables().then((result) => {
+  console.log(result);
+});
 
 // const uniswapUsdcAddress = "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc";
 // const uniswapAbi = [
