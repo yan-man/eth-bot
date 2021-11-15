@@ -21,10 +21,15 @@
   "dependencies": {
     "axios": "^0.24.0",
     "body-parser": "^1.19.0",
+    "config": "^3.3.6",
     "dotenv": "^10.0.0",
+    "ethers": "^5.5.1",
     "express": "^4.17.1",
     "lodash": "^4.17.21",
     "nodemon": "^2.0.15",
     "web3": "^1.6.0"
+  },
+  "devDependencies": {
+    "@uniswap/v3-sdk": "^3.7.0"
   }
 }
