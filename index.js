@@ -1,553 +1,561 @@
 const config = require("config");
-// require("dotenv").config();
 const express = require("express");
-// const Web3 = require("web3");
+const Web3 = require("web3");
 const { ethers } = require("ethers");
 
-const CoinGecko = require("coingecko-api");
-
+// server config
 const port = process.env.PORT || 3000;
 const app = express();
-
-const provider = new ethers.providers.JsonRpcProvider(config.get("RPC_URL"));
-
-const dai = require("./services/dai");
-const uniswap = require("./services/uniswap");
-
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });
 
-const CoinGeckoClient = new CoinGecko();
+// web3 config
+const web3 = new Web3(config.get("RPC_URL"));
 
-const execut = (async () => {
-  const uniswapContract = uniswap.getContract(provider);
-  const daiContract = dai.getContract(provider);
+// eth contract setup
+// Uniswap Factory Contract: https://etherscan.io/address/0xc0a47dfe034b400b47bdad5fecda2621de6c4d95#code
+const UNISWAP_FACTORY_ABI = [
+  {
+    name: "getExchange",
+    outputs: [{ type: "address", name: "out" }],
+    inputs: [{ type: "address", name: "token" }],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 715,
+  },
+];
+const UNISWAP_FACTORY_ADDR = "0xc0a47dfe034b400b47bdad5fecda2621de6c4d95";
+const uniswapFactoryContract = new web3.eth.Contract(
+  UNISWAP_FACTORY_ABI,
+  UNISWAP_FACTORY_ADDR
+);
 
-  // console.log(uniswapContract);
-  // const signer = await provider.getSigner(
-  //   "0x3C5de73bfFE35539A29fA1b4201BA517187E1e6E"
-  // );
-  // const daiWithSigner = daiContract.connect(signer);
-  // const testbalval1 = await daiWithSigner.balanceOf(
-  //   "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
-  // );
+UNISWAP_EXCHANGE_ABI = [
+  {
+    name: "TokenPurchase",
+    inputs: [
+      { type: "address", name: "buyer", indexed: true },
+      { type: "uint256", name: "eth_sold", indexed: true },
+      { type: "uint256", name: "tokens_bought", indexed: true },
+    ],
+    anonymous: false,
+    type: "event",
+  },
+  {
+    name: "EthPurchase",
+    inputs: [
+      { type: "address", name: "buyer", indexed: true },
+      { type: "uint256", name: "tokens_sold", indexed: true },
+      { type: "uint256", name: "eth_bought", indexed: true },
+    ],
+    anonymous: false,
+    type: "event",
+  },
+  {
+    name: "AddLiquidity",
+    inputs: [
+      { type: "address", name: "provider", indexed: true },
+      { type: "uint256", name: "eth_amount", indexed: true },
+      { type: "uint256", name: "token_amount", indexed: true },
+    ],
+    anonymous: false,
+    type: "event",
+  },
+  {
+    name: "RemoveLiquidity",
+    inputs: [
+      { type: "address", name: "provider", indexed: true },
+      { type: "uint256", name: "eth_amount", indexed: true },
+      { type: "uint256", name: "token_amount", indexed: true },
+    ],
+    anonymous: false,
+    type: "event",
+  },
+  {
+    name: "Transfer",
+    inputs: [
+      { type: "address", name: "_from", indexed: true },
+      { type: "address", name: "_to", indexed: true },
+      { type: "uint256", name: "_value", indexed: false },
+    ],
+    anonymous: false,
+    type: "event",
+  },
+  {
+    name: "Approval",
+    inputs: [
+      { type: "address", name: "_owner", indexed: true },
+      { type: "address", name: "_spender", indexed: true },
+      { type: "uint256", name: "_value", indexed: false },
+    ],
+    anonymous: false,
+    type: "event",
+  },
+  {
+    name: "setup",
+    outputs: [],
+    inputs: [{ type: "address", name: "token_addr" }],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 175875,
+  },
+  {
+    name: "addLiquidity",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "min_liquidity" },
+      { type: "uint256", name: "max_tokens" },
+      { type: "uint256", name: "deadline" },
+    ],
+    constant: false,
+    payable: true,
+    type: "function",
+    gas: 82616,
+  },
+  {
+    name: "removeLiquidity",
+    outputs: [
+      { type: "uint256", name: "out" },
+      { type: "uint256", name: "out" },
+    ],
+    inputs: [
+      { type: "uint256", name: "amount" },
+      { type: "uint256", name: "min_eth" },
+      { type: "uint256", name: "min_tokens" },
+      { type: "uint256", name: "deadline" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 116814,
+  },
+  {
+    name: "__default__",
+    outputs: [],
+    inputs: [],
+    constant: false,
+    payable: true,
+    type: "function",
+  },
+  {
+    name: "ethToTokenSwapInput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "min_tokens" },
+      { type: "uint256", name: "deadline" },
+    ],
+    constant: false,
+    payable: true,
+    type: "function",
+    gas: 12757,
+  },
+  {
+    name: "ethToTokenTransferInput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "min_tokens" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "recipient" },
+    ],
+    constant: false,
+    payable: true,
+    type: "function",
+    gas: 12965,
+  },
+  {
+    name: "ethToTokenSwapOutput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_bought" },
+      { type: "uint256", name: "deadline" },
+    ],
+    constant: false,
+    payable: true,
+    type: "function",
+    gas: 50463,
+  },
+  {
+    name: "ethToTokenTransferOutput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_bought" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "recipient" },
+    ],
+    constant: false,
+    payable: true,
+    type: "function",
+    gas: 50671,
+  },
+  {
+    name: "tokenToEthSwapInput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_sold" },
+      { type: "uint256", name: "min_eth" },
+      { type: "uint256", name: "deadline" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 47503,
+  },
+  {
+    name: "tokenToEthTransferInput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_sold" },
+      { type: "uint256", name: "min_eth" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "recipient" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 47712,
+  },
+  {
+    name: "tokenToEthSwapOutput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "eth_bought" },
+      { type: "uint256", name: "max_tokens" },
+      { type: "uint256", name: "deadline" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 50175,
+  },
+  {
+    name: "tokenToEthTransferOutput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "eth_bought" },
+      { type: "uint256", name: "max_tokens" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "recipient" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 50384,
+  },
+  {
+    name: "tokenToTokenSwapInput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_sold" },
+      { type: "uint256", name: "min_tokens_bought" },
+      { type: "uint256", name: "min_eth_bought" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "token_addr" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 51007,
+  },
+  {
+    name: "tokenToTokenTransferInput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_sold" },
+      { type: "uint256", name: "min_tokens_bought" },
+      { type: "uint256", name: "min_eth_bought" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "recipient" },
+      { type: "address", name: "token_addr" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 51098,
+  },
+  {
+    name: "tokenToTokenSwapOutput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_bought" },
+      { type: "uint256", name: "max_tokens_sold" },
+      { type: "uint256", name: "max_eth_sold" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "token_addr" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 54928,
+  },
+  {
+    name: "tokenToTokenTransferOutput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_bought" },
+      { type: "uint256", name: "max_tokens_sold" },
+      { type: "uint256", name: "max_eth_sold" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "recipient" },
+      { type: "address", name: "token_addr" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 55019,
+  },
+  {
+    name: "tokenToExchangeSwapInput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_sold" },
+      { type: "uint256", name: "min_tokens_bought" },
+      { type: "uint256", name: "min_eth_bought" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "exchange_addr" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 49342,
+  },
+  {
+    name: "tokenToExchangeTransferInput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_sold" },
+      { type: "uint256", name: "min_tokens_bought" },
+      { type: "uint256", name: "min_eth_bought" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "recipient" },
+      { type: "address", name: "exchange_addr" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 49532,
+  },
+  {
+    name: "tokenToExchangeSwapOutput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_bought" },
+      { type: "uint256", name: "max_tokens_sold" },
+      { type: "uint256", name: "max_eth_sold" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "exchange_addr" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 53233,
+  },
+  {
+    name: "tokenToExchangeTransferOutput",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "uint256", name: "tokens_bought" },
+      { type: "uint256", name: "max_tokens_sold" },
+      { type: "uint256", name: "max_eth_sold" },
+      { type: "uint256", name: "deadline" },
+      { type: "address", name: "recipient" },
+      { type: "address", name: "exchange_addr" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 53423,
+  },
+  {
+    name: "getEthToTokenInputPrice",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [{ type: "uint256", name: "eth_sold" }],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 5542,
+  },
+  {
+    name: "getEthToTokenOutputPrice",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [{ type: "uint256", name: "tokens_bought" }],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 6872,
+  },
+  {
+    name: "getTokenToEthInputPrice",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [{ type: "uint256", name: "tokens_sold" }],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 5637,
+  },
+  {
+    name: "getTokenToEthOutputPrice",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [{ type: "uint256", name: "eth_bought" }],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 6897,
+  },
+  {
+    name: "tokenAddress",
+    outputs: [{ type: "address", name: "out" }],
+    inputs: [],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 1413,
+  },
+  {
+    name: "factoryAddress",
+    outputs: [{ type: "address", name: "out" }],
+    inputs: [],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 1443,
+  },
+  {
+    name: "balanceOf",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [{ type: "address", name: "_owner" }],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 1645,
+  },
+  {
+    name: "transfer",
+    outputs: [{ type: "bool", name: "out" }],
+    inputs: [
+      { type: "address", name: "_to" },
+      { type: "uint256", name: "_value" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 75034,
+  },
+  {
+    name: "transferFrom",
+    outputs: [{ type: "bool", name: "out" }],
+    inputs: [
+      { type: "address", name: "_from" },
+      { type: "address", name: "_to" },
+      { type: "uint256", name: "_value" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 110907,
+  },
+  {
+    name: "approve",
+    outputs: [{ type: "bool", name: "out" }],
+    inputs: [
+      { type: "address", name: "_spender" },
+      { type: "uint256", name: "_value" },
+    ],
+    constant: false,
+    payable: false,
+    type: "function",
+    gas: 38769,
+  },
+  {
+    name: "allowance",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [
+      { type: "address", name: "_owner" },
+      { type: "address", name: "_spender" },
+    ],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 1925,
+  },
+  {
+    name: "name",
+    outputs: [{ type: "bytes32", name: "out" }],
+    inputs: [],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 1623,
+  },
+  {
+    name: "symbol",
+    outputs: [{ type: "bytes32", name: "out" }],
+    inputs: [],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 1653,
+  },
+  {
+    name: "decimals",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 1683,
+  },
+  {
+    name: "totalSupply",
+    outputs: [{ type: "uint256", name: "out" }],
+    inputs: [],
+    constant: true,
+    payable: false,
+    type: "function",
+    gas: 1713,
+  },
+];
 
-  // console.log(signer);
-  // console.log(await daiContract.symbol());
-  // console.log(testbalval1.toNumber());
+let isInProgress = false;
+// bot implementation
+const checkPrice = async () => {
+  console.log("check price...");
+  if (isInProgress) {
+    return;
+  }
 
-  const testbalval = await daiContract.balanceOf(
-    "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
-  );
+  isInProgress = true;
+  console.log("begin process...");
+  try {
+    // test first with DAI token vs ETH to make sure it is working properly
+    const exchangeAddress = await uniswapFactoryContract.methods
+      .getExchange("0x6b175474e89094c44da98b954eedeac495271d0f")
+      .call();
+    const exchangeContract = new web3.eth.Contract(
+      UNISWAP_EXCHANGE_ABI,
+      exchangeAddress
+    );
+    const uniswapRes = await exchangeContract.methods
+      .getEthToTokenInputPrice(web3.utils.toWei("1", "ETHER"))
+      .call();
 
-  console.log(testbalval.toString());
+    const val = web3.utils.fromWei(uniswapRes, "ether");
+    console.log(val);
+  } catch (error) {
+    console.log(error);
+  }
+  success = 1;
+  if (success) {
+    clearInterval(monitor);
+    // if success, clear the interval, clear progress flag
+    isInProgress = false;
+  }
+};
 
-  // const bal = await signer.getBalance();
-  // // const signerBalance = await signer.getBalance();
-  // console.log(bal.toString());
-  console.log(ethers.utils.formatUnits(testbalval.toNumber(), 18));
-  // // const val = await provider.getBlockNumber();
-  // const balance = await provider.getBalance(config.get("ACCOUNT_ADDR"));
-  // // console.log(val);
-  //
-})();
-
-// const uniswapUsdcAddress = "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc";
-// const uniswapAbi = [
-//   {
-//     inputs: [],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "constructor",
-//   },
-//   {
-//     anonymous: false,
-//     inputs: [
-//       {
-//         indexed: true,
-//         internalType: "address",
-//         name: "owner",
-//         type: "address",
-//       },
-//       {
-//         indexed: true,
-//         internalType: "address",
-//         name: "spender",
-//         type: "address",
-//       },
-//       {
-//         indexed: false,
-//         internalType: "uint256",
-//         name: "value",
-//         type: "uint256",
-//       },
-//     ],
-//     name: "Approval",
-//     type: "event",
-//   },
-//   {
-//     anonymous: false,
-//     inputs: [
-//       {
-//         indexed: true,
-//         internalType: "address",
-//         name: "sender",
-//         type: "address",
-//       },
-//       {
-//         indexed: false,
-//         internalType: "uint256",
-//         name: "amount0",
-//         type: "uint256",
-//       },
-//       {
-//         indexed: false,
-//         internalType: "uint256",
-//         name: "amount1",
-//         type: "uint256",
-//       },
-//       { indexed: true, internalType: "address", name: "to", type: "address" },
-//     ],
-//     name: "Burn",
-//     type: "event",
-//   },
-//   {
-//     anonymous: false,
-//     inputs: [
-//       {
-//         indexed: true,
-//         internalType: "address",
-//         name: "sender",
-//         type: "address",
-//       },
-//       {
-//         indexed: false,
-//         internalType: "uint256",
-//         name: "amount0",
-//         type: "uint256",
-//       },
-//       {
-//         indexed: false,
-//         internalType: "uint256",
-//         name: "amount1",
-//         type: "uint256",
-//       },
-//     ],
-//     name: "Mint",
-//     type: "event",
-//   },
-//   {
-//     anonymous: false,
-//     inputs: [
-//       {
-//         indexed: true,
-//         internalType: "address",
-//         name: "sender",
-//         type: "address",
-//       },
-//       {
-//         indexed: false,
-//         internalType: "uint256",
-//         name: "amount0In",
-//         type: "uint256",
-//       },
-//       {
-//         indexed: false,
-//         internalType: "uint256",
-//         name: "amount1In",
-//         type: "uint256",
-//       },
-//       {
-//         indexed: false,
-//         internalType: "uint256",
-//         name: "amount0Out",
-//         type: "uint256",
-//       },
-//       {
-//         indexed: false,
-//         internalType: "uint256",
-//         name: "amount1Out",
-//         type: "uint256",
-//       },
-//       { indexed: true, internalType: "address", name: "to", type: "address" },
-//     ],
-//     name: "Swap",
-//     type: "event",
-//   },
-//   {
-//     anonymous: false,
-//     inputs: [
-//       {
-//         indexed: false,
-//         internalType: "uint112",
-//         name: "reserve0",
-//         type: "uint112",
-//       },
-//       {
-//         indexed: false,
-//         internalType: "uint112",
-//         name: "reserve1",
-//         type: "uint112",
-//       },
-//     ],
-//     name: "Sync",
-//     type: "event",
-//   },
-//   {
-//     anonymous: false,
-//     inputs: [
-//       { indexed: true, internalType: "address", name: "from", type: "address" },
-//       { indexed: true, internalType: "address", name: "to", type: "address" },
-//       {
-//         indexed: false,
-//         internalType: "uint256",
-//         name: "value",
-//         type: "uint256",
-//       },
-//     ],
-//     name: "Transfer",
-//     type: "event",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "DOMAIN_SEPARATOR",
-//     outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "MINIMUM_LIQUIDITY",
-//     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "PERMIT_TYPEHASH",
-//     outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [
-//       { internalType: "address", name: "", type: "address" },
-//       { internalType: "address", name: "", type: "address" },
-//     ],
-//     name: "allowance",
-//     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: false,
-//     inputs: [
-//       { internalType: "address", name: "spender", type: "address" },
-//       { internalType: "uint256", name: "value", type: "uint256" },
-//     ],
-//     name: "approve",
-//     outputs: [{ internalType: "bool", name: "", type: "bool" }],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [{ internalType: "address", name: "", type: "address" }],
-//     name: "balanceOf",
-//     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: false,
-//     inputs: [{ internalType: "address", name: "to", type: "address" }],
-//     name: "burn",
-//     outputs: [
-//       { internalType: "uint256", name: "amount0", type: "uint256" },
-//       { internalType: "uint256", name: "amount1", type: "uint256" },
-//     ],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "decimals",
-//     outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "factory",
-//     outputs: [{ internalType: "address", name: "", type: "address" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "getReserves",
-//     outputs: [
-//       { internalType: "uint112", name: "_reserve0", type: "uint112" },
-//       { internalType: "uint112", name: "_reserve1", type: "uint112" },
-//       { internalType: "uint32", name: "_blockTimestampLast", type: "uint32" },
-//     ],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: false,
-//     inputs: [
-//       { internalType: "address", name: "_token0", type: "address" },
-//       { internalType: "address", name: "_token1", type: "address" },
-//     ],
-//     name: "initialize",
-//     outputs: [],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "kLast",
-//     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: false,
-//     inputs: [{ internalType: "address", name: "to", type: "address" }],
-//     name: "mint",
-//     outputs: [{ internalType: "uint256", name: "liquidity", type: "uint256" }],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "name",
-//     outputs: [{ internalType: "string", name: "", type: "string" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [{ internalType: "address", name: "", type: "address" }],
-//     name: "nonces",
-//     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: false,
-//     inputs: [
-//       { internalType: "address", name: "owner", type: "address" },
-//       { internalType: "address", name: "spender", type: "address" },
-//       { internalType: "uint256", name: "value", type: "uint256" },
-//       { internalType: "uint256", name: "deadline", type: "uint256" },
-//       { internalType: "uint8", name: "v", type: "uint8" },
-//       { internalType: "bytes32", name: "r", type: "bytes32" },
-//       { internalType: "bytes32", name: "s", type: "bytes32" },
-//     ],
-//     name: "permit",
-//     outputs: [],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "price0CumulativeLast",
-//     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "price1CumulativeLast",
-//     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: false,
-//     inputs: [{ internalType: "address", name: "to", type: "address" }],
-//     name: "skim",
-//     outputs: [],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "function",
-//   },
-//   {
-//     constant: false,
-//     inputs: [
-//       { internalType: "uint256", name: "amount0Out", type: "uint256" },
-//       { internalType: "uint256", name: "amount1Out", type: "uint256" },
-//       { internalType: "address", name: "to", type: "address" },
-//       { internalType: "bytes", name: "data", type: "bytes" },
-//     ],
-//     name: "swap",
-//     outputs: [],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "symbol",
-//     outputs: [{ internalType: "string", name: "", type: "string" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: false,
-//     inputs: [],
-//     name: "sync",
-//     outputs: [],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "token0",
-//     outputs: [{ internalType: "address", name: "", type: "address" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "token1",
-//     outputs: [{ internalType: "address", name: "", type: "address" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: true,
-//     inputs: [],
-//     name: "totalSupply",
-//     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-//     payable: false,
-//     stateMutability: "view",
-//     type: "function",
-//   },
-//   {
-//     constant: false,
-//     inputs: [
-//       { internalType: "address", name: "to", type: "address" },
-//       { internalType: "uint256", name: "value", type: "uint256" },
-//     ],
-//     name: "transfer",
-//     outputs: [{ internalType: "bool", name: "", type: "bool" }],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "function",
-//   },
-//   {
-//     constant: false,
-//     inputs: [
-//       { internalType: "address", name: "from", type: "address" },
-//       { internalType: "address", name: "to", type: "address" },
-//       { internalType: "uint256", name: "value", type: "uint256" },
-//     ],
-//     name: "transferFrom",
-//     outputs: [{ internalType: "bool", name: "", type: "bool" }],
-//     payable: false,
-//     stateMutability: "nonpayable",
-//     type: "function",
-//   },
-// ]; // get the abi from https://etherscan.io/address/0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc#code
-
-// const getUniswapContract = async (address) =>
-//   await new ethers.Contract(address, uniswapAbi, provider);
-
-// const getEthUsdPrice = async () =>
-//   await getUniswapContract(uniswapUsdcAddress)
-//     .then((contract) => contract.getReserves())
-//     .then(
-//       (reserves) =>
-//         (Number(reserves._reserve0) / Number(reserves._reserve1)) * 1e12
-//     )
-//     .then(console.log); // times 10^12 because usdc only has 6 decimals
-
-// getEthUsdPrice();
-
-// // web3 config:
-// // const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
-// const web3 = new Web3(
-//   new Web3.providers.HttpProvider(
-//     "https://ropsten.infura.io/v3/5aa9a7d08657416a893bd35b2894e2d9"
-//   )
-// );
-// // web3.eth.getAccounts(console.log);
-// let isInProgress = false;
-// let monitor;
-
-// const uniswapContract = uniswap.getContract(web3);
-// const daiContract = dai.getContract(web3);
-
-// const ETH_AMOUNT = web3.utils.toWei(".0001", "Ether");
-// console.log("Eth Amount", ETH_AMOUNT);
-
-// const checkPrice = async () => {
-//   console.log("check price...");
-//   if (isInProgress) {
-//     return;
-//   }
-
-//   isInProgress = true;
-//   console.log("begin process...");
-//   try {
-//     const testval = await uniswapContract.methods;
-
-//     console.log(testval);
-//   } catch (error) {
-//     console.log(error);
-//   }
-//   // try to find eth price
-//   // if it meets criteria, do some action
-//   success = 1;
-//   if (success) {
-//     clearInterval(monitor);
-//     // if success, clear the interval, clear progress flag
-//     isInProgress = false;
-//   }
-// };
-
-// // Query market prices every n sec
-// const POLLING_INTERVAL = process.env.POLLING_INTERVAL || 1000; // msec
-// monitor = setInterval(async () => {
-//   await checkPrice();
-// }, POLLING_INTERVAL);
+// Query market prices every n sec
+const POLLING_INTERVAL = process.env.POLLING_INTERVAL || 1000; // msec
+monitor = setInterval(async () => {
+  await checkPrice();
+}, POLLING_INTERVAL);

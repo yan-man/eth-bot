@@ -1,9 +1,3 @@
-// const uniswap = require("../config/uniswap");
-// import {
-//   abi as FACTORY_ABI,
-//   bytecode as FACTORY_BYTECODE,
-// } from "@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json";
-
 const { ethers } = require("ethers");
 
 const abi = [
