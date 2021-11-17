@@ -4,7 +4,7 @@ const Web3 = require("web3");
 const { ethers } = require("ethers");
 
 // server config
-const port = process.env.PORT || 3000;
+const port = config.get("PORT") || 3000;
 const app = express();
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
@@ -530,13 +530,16 @@ const checkPrice = async () => {
   console.log("begin process...");
   try {
     // test first with DAI token vs ETH to make sure it is working properly
+    // use factory contract to get exchange address of the DAI:ETH swap
     const exchangeAddress = await uniswapFactoryContract.methods
       .getExchange("0x6b175474e89094c44da98b954eedeac495271d0f")
       .call();
+    // get exchange contract
     const exchangeContract = new web3.eth.Contract(
       UNISWAP_EXCHANGE_ABI,
       exchangeAddress
     );
+    // get price of token0:token1 based on exchange contract methods
     const uniswapRes = await exchangeContract.methods
       .getEthToTokenInputPrice(web3.utils.toWei("1", "ETHER"))
       .call();
@@ -555,7 +558,7 @@ const checkPrice = async () => {
 };
 
 // Query market prices every n sec
-const POLLING_INTERVAL = process.env.POLLING_INTERVAL || 1000; // msec
+const pollingInterval = config.get("INTERVAL") || 1000; // msec
 monitor = setInterval(async () => {
   await checkPrice();
-}, POLLING_INTERVAL);
+}, pollingInterval);
