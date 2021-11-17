@@ -17,7 +17,6 @@ class priceCRON {
     const job = new CronJob(
       `*/${pollingInterval} * * * * *`,
       () => {
-        // console.log(format(Date.now(), "MM/dd/yyyy H:ii:ss"));
         this.checkPrice();
       },
       null,
@@ -85,11 +84,11 @@ class priceCRON {
     } catch (error) {
       console.log(error);
     }
-    const success = 1;
-    if (success) {
-      // if success, clear the interval, clear progress flag
-      this.isInProgress = false;
-    }
+    // const success = 1;
+    // if (success) {
+    //   // if success, clear the interval, clear progress flag
+    //   this.isInProgress = false;
+    // }
   };
 }
 
