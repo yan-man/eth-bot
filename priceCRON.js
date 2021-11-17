@@ -1,68 +1,96 @@
 const cron = require("cron");
 const { format } = require("date-fns");
 const uniswap = require("./services/uniswap");
-const Web3 = require("web3");
-const config = require("config");
+class priceCRON {
+  web3;
+  isInProgress = false;
+  #UNISWAP_EXCHANGE_ABI = uniswap.UNISWAP_EXCHANGE_ABI;
+  #uniswapFactoryContract;
 
-const UNISWAP_EXCHANGE_ABI = uniswap.UNISWAP_EXCHANGE_ABI;
-
-// web3 config
-const web3 = new Web3(config.get("RPC_URL"));
-
-const uniswapFactoryContract = uniswap.getFactoryContract(web3);
-
-let isInProgress = false;
-// bot implementation
-const checkPrice = async () => {
-  console.log("check price...");
-  if (isInProgress) {
-    return;
+  constructor(web3) {
+    this.web3 = web3;
+    this.#uniswapFactoryContract = uniswap.getFactoryContract(web3);
   }
 
-  isInProgress = true;
-  console.log("begin process...");
-  try {
-    // test first with DAI token vs ETH to make sure it is working properly
-    // use factory contract to get exchange address of the DAI:ETH swap
-    const exchangeAddress = await uniswapFactoryContract.methods
-      .getExchange("0x6b175474e89094c44da98b954eedeac495271d0f")
+  update(pollingInterval) {
+    const CronJob = cron.CronJob;
+    const job = new CronJob(
+      `*/${pollingInterval} * * * * *`,
+      () => {
+        // console.log(format(Date.now(), "MM/dd/yyyy H:ii:ss"));
+        this.checkPrice();
+      },
+      null,
+      true,
+      "America/Chicago"
+    );
+    job.start();
+  }
+
+  getPairPrice = async (args) => {
+    const {
+      token0Name,
+      token0Address,
+      token1Name,
+      token1Address,
+      token0Amount,
+    } = {
+      ...args,
+    };
+
+    const exchangeAddress = await this.#uniswapFactoryContract.methods
+      .getExchange(token1Address)
       .call();
-    // get exchange contract
-    const exchangeContract = new web3.eth.Contract(
-      UNISWAP_EXCHANGE_ABI,
+
+    const exchangeContract = new this.web3.eth.Contract(
+      this.#UNISWAP_EXCHANGE_ABI,
       exchangeAddress
     );
+
     // get price of token0:token1 based on exchange contract methods
-    const uniswapRes = await exchangeContract.methods
-      .getEthToTokenInputPrice(web3.utils.toWei("1", "ETHER"))
+    const uniswapResult = await exchangeContract.methods
+      .getEthToTokenInputPrice(token0Amount)
       .call();
 
-    const val = web3.utils.fromWei(uniswapRes, "ether");
-    console.log(val);
-  } catch (error) {
-    console.log(error);
-  }
-  success = 1;
-  if (success) {
-    // clearInterval(monitor);
-    // if success, clear the interval, clear progress flag
-    isInProgress = false;
-  }
-};
+    const token01price = this.web3.utils.fromWei(uniswapResult, "ETHER");
 
-function update(pollingInterval) {
-  const CronJob = cron.CronJob;
-  const job = new CronJob(
-    `*/${pollingInterval / 1000} * * * * *`,
-    function () {
-      console.log(format(Date.now(), "MM/dd/yyyy H:ii:ss"));
-      checkPrice();
-    },
-    null,
-    true,
-    "America/Chicago"
-  );
-  job.start();
+    const tableField = `UniswapV1 Conversion [${token1Name}:${token0Name}]`;
+    const displayObject = {
+      "Token 0": token0Name,
+      "Token 1": token1Name,
+      "Token0 Amount [ETH]": this.web3.utils.fromWei(token0Amount, "ETHER"),
+    };
+    displayObject[tableField] = token01price;
+    displayObject["Timestamp"] = format(Date.now(), "MM/dd/yyyy H:ii:ss");
+    console.table([displayObject]);
+  };
+
+  checkPrice = async () => {
+    // bot implementation
+    console.log("start process...");
+    if (this.isInProgress) {
+      return;
+    }
+
+    this.isInProgress = true;
+    try {
+      console.log("get pair price...");
+      await this.getPairPrice({
+        token0Name: "ETH",
+        token0Address: "",
+        token1Name: "DAI",
+        token1Address: "0x6b175474e89094c44da98b954eedeac495271d0f",
+        token0Amount: this.web3.utils.toWei("1", "ETHER"),
+      });
+    } catch (error) {
+      console.log(error);
+    }
+    const success = 1;
+    if (success) {
+      // if success, clear the interval, clear progress flag
+      this.isInProgress = false;
+    }
+  };
 }
 
-module.exports = update;
+module.exports = priceCRON;
