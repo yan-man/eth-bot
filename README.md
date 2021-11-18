@@ -45,6 +45,10 @@ $ npm install
 $ npm run dev
 ```
 
+7. In console, you should see price comparisons displayed in a table, updating in regular intervals defined by `INTERVAL` field in `default.json` config. NOTE: some prices seem off, probably due to Uniswap V1 implementation.
+
+![image info](./images/example-output.png)
+
 ## Further Development
 
 ### From `V0.1.0`:
