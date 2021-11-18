@@ -1,7 +1,7 @@
 {
   "name": "eth-bot",
-  "version": "1.0.0",
-  "description": "bot to check eth prices, perform actions, etc",
+  "version": "0.1.0",
+  "description": "bot to check eth price vs other ERC-20 tokens",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
