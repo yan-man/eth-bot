@@ -3,8 +3,13 @@ const config = require("config");
 const express = require("express");
 // const Web3 = require("web3");
 const { ethers } = require("ethers");
+const { Token } = require("@uniswap/sdk-core");
+const { Pool } = require("@uniswap/v3-sdk");
+const {
+  abi: IUniswapV3PoolABI,
+} = require("@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json");
 
-const CoinGecko = require("coingecko-api");
+// const CoinGecko = require("coingecko-api");
 
 const port = process.env.PORT || 3000;
 const app = express();
@@ -18,40 +23,114 @@ app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });
 
-const CoinGeckoClient = new CoinGecko();
+// const CoinGeckoClient = new CoinGecko();
 
 const execut = (async () => {
   const uniswapContract = uniswap.getContract(provider);
   const daiContract = dai.getContract(provider);
+})();
 
-  // console.log(uniswapContract);
-  // const signer = await provider.getSigner(
-  //   "0x3C5de73bfFE35539A29fA1b4201BA517187E1e6E"
-  // );
-  // const daiWithSigner = daiContract.connect(signer);
-  // const testbalval1 = await daiWithSigner.balanceOf(
-  //   "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
-  // );
+const poolAddress = "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8";
+// const poolImmutablesAbi = [
+//   "function factory() external view returns (address)",
+//   "function token0() external view returns (address)",
+//   "function token1() external view returns (address)",
+//   "function fee() external view returns (uint24)",
+//   "function tickSpacing() external view returns (int24)",
+//   "function maxLiquidityPerTick() external view returns (uint128)",
+// ];
 
-  // console.log(signer);
-  // console.log(await daiContract.symbol());
-  // console.log(testbalval1.toNumber());
+const poolContract = new ethers.Contract(
+  poolAddress,
+  IUniswapV3PoolABI,
+  provider
+);
 
-  const testbalval = await daiContract.balanceOf(
-    "0x5FEe5D667DA12C0dA7315bC5718f04F2DD913A13"
+async function getPoolImmutables() {
+  const PoolImmutables = {
+    factory: await poolContract.factory(),
+    token0: await poolContract.token0(),
+    token1: await poolContract.token1(),
+    fee: await poolContract.fee(),
+    tickSpacing: await poolContract.tickSpacing(),
+    maxLiquidityPerTick: await poolContract.maxLiquidityPerTick(),
+  };
+  return PoolImmutables;
+}
+
+async function getPoolState() {
+  const [liquidity, slot] = await Promise.all([
+    poolContract.liquidity(),
+    poolContract.slot0(),
+  ]);
+
+  const PoolState = {
+    liquidity,
+    sqrtPriceX96: slot[0],
+    tick: slot[1],
+    observationIndex: slot[2],
+    observationCardinality: slot[3],
+    observationCardinalityNext: slot[4],
+    feeProtocol: slot[5],
+    unlocked: slot[6],
+  };
+
+  return PoolState;
+}
+
+async function main() {
+  const [immutables, state] = await Promise.all([
+    getPoolImmutables(),
+    getPoolState(),
+  ]);
+
+  const TokenA = new Token(3, immutables.token0, 6, "USDC", "USD Coin");
+
+  const TokenB = new Token(3, immutables.token1, 18, "ETH", "Ether");
+
+  const poolExample = new Pool(
+    TokenA,
+    TokenB,
+    immutables.fee,
+    state.sqrtPriceX96.toString(),
+    state.liquidity.toString(),
+    state.tick
   );
 
-  console.log(testbalval.toString());
+  const token0Price = poolExample.token0Price;
+  const token1Price = poolExample.token1Price;
 
-  // const bal = await signer.getBalance();
-  // // const signerBalance = await signer.getBalance();
-  // console.log(bal.toString());
-  console.log(ethers.utils.formatUnits(testbalval.toNumber(), 18));
-  // // const val = await provider.getBlockNumber();
-  // const balance = await provider.getBalance(config.get("ACCOUNT_ADDR"));
-  // // console.log(val);
-  //
-})();
+  // console.log(poolExample.sqrtRatioX96);
+  // console.log(token0Price);
+  // console.log(2 ** 192 / poolExample.sqrtPriceX96 ** 2);
+}
+// function token0Price() {
+//   return (
+//     this._token0Price ??
+//     (this._token0Price = new Price(
+//       this.token0,
+//       this.token1,
+//       Q192,
+//       JSBI.multiply(this.sqrtRatioX96, this.sqrtRatioX96)
+//     ))
+//   );
+// }
+
+// function token1Price() {
+//   return (
+//     this._token1Price ??
+//     (this._token1Price = new Price(
+//       this.token1,
+//       this.token0,
+//       JSBI.multiply(this.sqrtRatioX96, this.sqrtRatioX96),
+//       Q192
+//     ))
+//   );
+// }
+
+main().then((result) => {
+  // console.log(result);
+});
 
 // const uniswapUsdcAddress = "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc";
 // const uniswapAbi = [
