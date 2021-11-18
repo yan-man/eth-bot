@@ -23,6 +23,8 @@
     "body-parser": "^1.19.0",
     "coingecko-api": "^1.0.10",
     "config": "^3.3.6",
+    "cron": "^1.8.2",
+    "date-fns": "^2.25.0",
     "debug": "^4.3.2",
     "dotenv": "^10.0.0",
     "ethers": "^5.5.1",
