@@ -18,4 +18,4 @@ const web3 = new Web3(config.get("RPC_URL"));
 
 // initialize price check CRON job
 const priceCheck = new priceCRON(web3);
-priceCheck.update(pollingInterval);
+priceCheck.start(pollingInterval);
