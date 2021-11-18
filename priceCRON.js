@@ -14,6 +14,7 @@ class priceCRON {
   }
 
   start(pollingInterval) {
+    // initialize CRON job to run process every n seconds
     const CronJob = cron.CronJob;
     const job = new CronJob(
       `*/${pollingInterval} * * * * *`,
@@ -38,6 +39,8 @@ class priceCRON {
       ...args,
     };
 
+    // use factory contract to get specific exchange contract
+    // corresponding to token0:token1 exchange
     const exchangeAddress = await this.#uniswapFactoryContract.methods
       .getExchange(token1Address)
       .call();
@@ -47,7 +50,8 @@ class priceCRON {
       exchangeAddress
     );
 
-    // get price of token0:token1 based on exchange contract methods
+    // get price of token0:token1 based on exchange contract method
+    // see: https://docs.uniswap.org/protocol/V1/reference/exchange
     const uniswapResult = await exchangeContract.methods
       .getEthToTokenInputPrice(
         this.web3.utils.toWei(token0Amount.toString(), "ETHER")
@@ -62,14 +66,16 @@ class priceCRON {
       "Token 1": token1Name,
       "Token0 Amount [ETH]": token0Amount.toString(),
     };
+    // so that tableField can be a string variable instead of a string literal
     displayObject[tableField] = token01price;
     displayObject["Timestamp"] = format(Date.now(), "MM/dd/yyyy H:ii:ss");
     console.table([displayObject]);
   };
 
+  // bot implementation
   checkPrice = async () => {
-    // bot implementation
     console.log("start process...");
+    // if already in progress, do not continue
     if (this.isInProgress) {
       return;
     }
@@ -90,7 +96,7 @@ class priceCRON {
 
       const success = 1;
       if (success) {
-        // if success, clear the interval, clear progress flag
+        // if success, it is no longer in progress; clear flag
         this.isInProgress = false;
       }
     } catch (error) {
