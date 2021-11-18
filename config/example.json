@@ -1,0 +1,5 @@
+{
+  "RPC_URL": "https://mainnet.infura.io/v3/________",
+  "PORT": 3000,
+  "INTERVAL": 1
+}
