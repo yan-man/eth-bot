@@ -1,19 +1,10 @@
-# Eth-bot
+# Eth Bot Price Checker v0.1.0
 
-## Author
+Bot to check eth prices against other ERC-20 tokens.
 
-Yan Man
+Connects to the [Uniswap Factory smart contract](https://etherscan.io/address/0xc0a47dfe034b400b47bdad5fecda2621de6c4d95) on Ethereum mainnet via [web3.js](https://web3js.readthedocs.io/en/v1.7.0/).
 
-## Summary
-
-Bot to check eth prices vs other ERC-20 tokens.
-
-## Requirements
-
-- `node v17.1.0`
-- `npm v8.1.3`
-
-## Installation
+## Quickstart
 
 1. Clone project into empty directory:
 
@@ -49,9 +40,13 @@ $ npm run dev
 
 ![image info](./images/example-output.png)
 
-## Further Development
+## Details
 
-### From `V0.1.0`:
+CRON jobs are set up to poll for data every 1 second. This can be configured in the `./index.js` file - `pollingInterval` variable.
+
+The selection of tokens that are included are in `./services/tokens.js` file. Update relevant information to query for other token data.
+
+## Further:
 
 - Add more ERC-20 tokens to compare
 - Add more DEXs to find price spread differences and identify arbitrage opportunities
@@ -59,3 +54,13 @@ $ npm run dev
 - Include slippage adjustment
 - Perform swaps based on price spread differences
 - Add unit tests
+- maybe ethers.js instead; easier to work with
+
+## Requirements
+
+- `node v17.1.0`
+- `npm v8.1.3`
+
+## Author
+
+Yan Man
